@@ -16,6 +16,7 @@ class LivenessService:
         """
         Initializes the LivenessService by downloading the ONNX model from Hugging Face
         and creating the ONNX Runtime session. This is done once on startup.
+        """
         logger.info("LivenessService instantiated. Models will be loaded lazily.")
         self.session = None
         self.input_name = None
