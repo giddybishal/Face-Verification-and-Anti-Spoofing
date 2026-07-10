@@ -1,0 +1,21 @@
+[project]
+name = "face-verification"
+version = "0.1.0"
+description = "A production-ready face verification pipeline using MiniFASNet and FaceNet512."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "gradio",
+    "onnxruntime",
+    "opencv-python-headless",
+    "numpy",
+    "huggingface-hub",
+    "pydantic"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
