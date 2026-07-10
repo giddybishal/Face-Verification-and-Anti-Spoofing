@@ -16,12 +16,27 @@ class EmbeddingService:
         Initializes the EmbeddingService using pure ONNX and OpenCV YuNet.
         No TensorFlow dependencies.
         """
-        logger.info("Initializing ONNX EmbeddingService...")
+        logger.info("EmbeddingService instantiated. Models will be loaded lazily.")
+        self.detector = None
+        self.session = None
+        self.input_name = None
+        self.input_size = None
+        self.is_nchw = None
+        self.detector_path = "face_detection_yunet_2023mar.onnx"
+        self.facenet_path = "facenet512.onnx"
+
+    def _ensure_initialized(self):
+        """
+        Lazily initializes the ONNX FaceNet session and YuNet detector.
+        """
+        if self.session is not None and self.detector is not None:
+            return
+            
+        logger.info("Initializing ONNX EmbeddingService models...")
         start_time = time.time()
         
         try:
             # Initialize YuNet Face Detector
-            self.detector_path = "face_detection_yunet_2023mar.onnx"
             if not os.path.exists(self.detector_path):
                 logger.error(f"YuNet model not found at {self.detector_path}")
                 raise FileNotFoundError(self.detector_path)
@@ -36,7 +51,6 @@ class EmbeddingService:
             )
             
             # Initialize FaceNet ONNX Session
-            self.facenet_path = "facenet512.onnx"
             if not os.path.exists(self.facenet_path):
                 logger.error(f"FaceNet ONNX model not found at {self.facenet_path}")
                 raise FileNotFoundError(self.facenet_path)
@@ -95,6 +109,7 @@ class EmbeddingService:
         Returns a list of dictionaries: 'face' (aligned crop), 'facial_area', 'confidence'.
         """
         try:
+            self._ensure_initialized()
             h, w = image.shape[:2]
             self.detector.setInputSize((w, h))
             
@@ -151,6 +166,7 @@ class EmbeddingService:
         Generates an embedding for a pre-cropped/aligned face image using ONNX.
         """
         try:
+            self._ensure_initialized()
             start_time = time.time()
             
             # Preprocess for FaceNet

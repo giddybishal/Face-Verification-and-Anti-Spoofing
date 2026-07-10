@@ -1,11 +1,13 @@
 import gradio as gr
 import numpy as np
+import spaces
 
 from src.services.verification_service import verification_service
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+@spaces.GPU
 def process_reference(image: np.ndarray):
     """
     Handles the upload of the reference image.
@@ -20,6 +22,7 @@ def process_reference(image: np.ndarray):
     else:
         return f"❌ {message}", None
 
+@spaces.GPU
 def process_frame(frame: np.ndarray, reference_embedding: np.ndarray):
     """
     Processes a frame from the webcam.

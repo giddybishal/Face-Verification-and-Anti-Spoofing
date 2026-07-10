@@ -16,8 +16,18 @@ class LivenessService:
         """
         Initializes the LivenessService by downloading the ONNX model from Hugging Face
         and creating the ONNX Runtime session. This is done once on startup.
+        logger.info("LivenessService instantiated. Models will be loaded lazily.")
+        self.session = None
+        self.input_name = None
+
+    def _ensure_initialized(self):
         """
-        logger.info("Initializing LivenessService...")
+        Lazily initializes the ONNX session.
+        """
+        if self.session is not None:
+            return
+            
+        logger.info("Initializing LivenessService ONNX session...")
         start_time = time.time()
         
         try:
@@ -78,6 +88,7 @@ class LivenessService:
             details (dict) containing raw scores
         """
         try:
+            self._ensure_initialized()
             start_time = time.time()
             input_tensor = self.preprocess(image, bbox)
             

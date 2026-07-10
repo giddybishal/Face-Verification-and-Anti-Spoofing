@@ -10,7 +10,8 @@ dependencies = [
     "opencv-python-headless",
     "numpy",
     "huggingface-hub",
-    "pydantic"
+    "pydantic",
+    "spaces"
 ]
 
 [build-system]
