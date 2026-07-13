@@ -145,13 +145,33 @@ class EmbeddingService:
                     new_center = np.dot(M, np.array([cx, cy, 1.0]))
                     new_cx, new_cy = int(new_center[0]), int(new_center[1])
                     
-                    new_x = max(0, int(new_cx - box_w / 2.0))
-                    new_y = max(0, int(new_cy - box_h / 2.0))
+                    # Enforce a perfect square crop to preserve aspect ratio
+                    margin = 1.2 # 20% margin to ensure entire head is captured
+                    max_side = int(max(box_w, box_h) * margin)
+                    half_side = max_side // 2
                     
-                    new_x_end = min(w, new_x + box_w)
-                    new_y_end = min(h, new_y + box_h)
+                    new_x = new_cx - half_side
+                    new_y = new_cy - half_side
+                    new_x_end = new_x + max_side
+                    new_y_end = new_y + max_side
                     
-                    face_crop = aligned_img[new_y:new_y_end, new_x:new_x_end]
+                    # Create black canvas for padded face to prevent squishing when bounds are hit
+                    face_crop = np.zeros((max_side, max_side, 3), dtype=aligned_img.dtype)
+                    
+                    # Calculate overlapping bounds
+                    src_x1 = max(0, new_x)
+                    src_y1 = max(0, new_y)
+                    src_x2 = min(w, new_x_end)
+                    src_y2 = min(h, new_y_end)
+                    
+                    dst_x1 = src_x1 - new_x
+                    dst_y1 = src_y1 - new_y
+                    dst_x2 = dst_x1 + (src_x2 - src_x1)
+                    dst_y2 = dst_y1 + (src_y2 - src_y1)
+                    
+                    # Copy pixels into the padded canvas
+                    if src_y2 > src_y1 and src_x2 > src_x1:
+                        face_crop[dst_y1:dst_y2, dst_x1:dst_x2] = aligned_img[src_y1:src_y2, src_x1:src_x2]
                     
                     if face_crop.size == 0:
                         continue
