@@ -159,4 +159,72 @@ class VerificationService:
         result["processing_time_ms"] = (time.time() - start_time) * 1000
         return result
 
+    def process_verification_image(self, test_image: np.ndarray, reference_embedding: np.ndarray) -> Dict[str, Any]:
+        """
+        Processes a static test image for identity verification against a reference embedding.
+        Bypasses liveness checking.
+        """
+        start_time = time.time()
+        
+        result = {
+            "status": "Processing",
+            "message": "",
+            "similarity": None,
+            "threshold": config.SIMILARITY_THRESHOLD,
+            "verified": False,
+            "processing_time_ms": 0
+        }
+        
+        if reference_embedding is None:
+            result["status"] = "Error"
+            result["message"] = "Waiting for reference image."
+            return result
+            
+        try:
+            faces = embedding_service.extract_faces(test_image)
+            
+            if len(faces) == 0:
+                result["status"] = "Warning"
+                result["message"] = "No face detected in test image."
+                return result
+                
+            if len(faces) > 1:
+                result["status"] = "Warning"
+                result["message"] = "Multiple faces detected in test image."
+                return result
+                
+            face_data = faces[0]
+            face_img = face_data['face']
+            
+            # Generate Embedding
+            frame_embedding = embedding_service.generate_embedding(face_img)
+            
+            if frame_embedding is None:
+                result["status"] = "Error"
+                result["message"] = "Failed to generate embedding for test image."
+                return result
+                
+            # Compute Similarity
+            similarity = embedding_service.compute_similarity(reference_embedding, frame_embedding)
+            result["similarity"] = similarity
+            
+            # Verification Decision
+            is_verified = bool(similarity < config.SIMILARITY_THRESHOLD)
+            
+            result["verified"] = is_verified
+            if is_verified:
+                result["status"] = "Success"
+                result["message"] = "Identity verified."
+            else:
+                result["status"] = "Failed"
+                result["message"] = "Identity not verified."
+                
+        except Exception as e:
+            logger.error(f"Error processing verification image: {e}")
+            result["status"] = "Error"
+            result["message"] = str(e)
+            
+        result["processing_time_ms"] = (time.time() - start_time) * 1000
+        return result
+
 verification_service = VerificationService()

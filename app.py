@@ -97,6 +97,31 @@ def process_frame(frame: np.ndarray, reference_embedding: np.ndarray, history: l
     
     return html, history
 
+@spaces.GPU
+def process_static_image(test_image: np.ndarray, reference_embedding: np.ndarray):
+    """
+    Processes a static test image against the reference embedding.
+    """
+    if test_image is None:
+        return "Please upload a test image."
+        
+    if reference_embedding is None:
+        return "<h3>Waiting for Reference Image...</h3>"
+        
+    result = verification_service.process_verification_image(test_image, reference_embedding)
+    
+    html = f"""
+    <div style="padding: 15px; border-radius: 10px; border: 1px solid var(--border-color-primary, #ccc); background: var(--background-fill-secondary, #f9f9f9); color: var(--body-text-color, black);">
+        <h3 style="margin-top: 0;">Verification Status: {result['status']}</h3>
+        <p><strong>Message:</strong> {result['message']}</p>
+        <hr>
+        <p><strong>Similarity Distance:</strong> {f"{result['similarity']:.4f}" if result['similarity'] is not None else "N/A"}</p>
+        <p><strong>Threshold:</strong> {result['threshold']} (Lower is better)</p>
+        <p><strong>Processing Time:</strong> {result['processing_time_ms']:.1f} ms</p>
+    </div>
+    """
+    return html
+
 def create_ui():
     """
     Creates and configures the Gradio Blocks UI.
@@ -107,7 +132,7 @@ def create_ui():
         history = gr.State([])
         
         gr.Markdown("# 🛡️ Face Verification Pipeline")
-        gr.Markdown("Prototype for production-ready face verification using MiniFASNet for liveness and FaceNet512 for embeddings.")
+        gr.Markdown("Choose between live webcam verification (with anti-spoofing) or static image comparison.")
         
         with gr.Row():
             with gr.Column(scale=1):
@@ -116,12 +141,19 @@ def create_ui():
                 ref_status_text = gr.Markdown("Waiting for image...")
                 
             with gr.Column(scale=2):
-                gr.Markdown("### 2. Live Verification")
-                webcam_input = gr.Image(sources=["webcam"], streaming=True, type="numpy", label="Webcam")
-                
-            with gr.Column(scale=1):
-                gr.Markdown("### 3. Verification Results")
-                results_output = gr.HTML("Waiting for stream...")
+                with gr.Tabs():
+                    with gr.TabItem("Webcam (with Anti-Spoofing)"):
+                        gr.Markdown("### 2. Live Verification")
+                        webcam_input = gr.Image(sources=["webcam"], streaming=True, type="numpy", label="Webcam")
+                        gr.Markdown("### 3. Verification Results")
+                        results_output = gr.HTML("Waiting for stream...")
+                        
+                    with gr.TabItem("Image vs Image (No Anti-Spoofing)"):
+                        gr.Markdown("### 2. Upload Test Image")
+                        test_input = gr.Image(sources=["upload"], type="numpy", label="Test Image")
+                        verify_btn = gr.Button("Verify Identity")
+                        gr.Markdown("### 3. Verification Results")
+                        static_results_output = gr.HTML("Waiting for images...")
                 
         # Event Listeners
         # When reference image is uploaded
@@ -143,6 +175,13 @@ def create_ui():
             inputs=[webcam_input, reference_embedding, history],
             outputs=[results_output, history],
             time_limit=15 # Adjust if it buffers too much
+        )
+        
+        # When verify button is clicked for static images
+        verify_btn.click(
+            fn=process_static_image,
+            inputs=[test_input, reference_embedding],
+            outputs=[static_results_output]
         )
         
     return demo
