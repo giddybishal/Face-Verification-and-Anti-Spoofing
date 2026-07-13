@@ -38,7 +38,7 @@ def process_frame(frame: np.ndarray, reference_embedding: np.ndarray):
     
     # Format the result as HTML for better presentation
     html = f"""
-    <div style="padding: 15px; border-radius: 10px; border: 1px solid #ccc; background: #f9f9f9; color: black;">
+    <div style="padding: 15px; border-radius: 10px; border: 1px solid var(--border-color-primary, #ccc); background: var(--background-fill-secondary, #f9f9f9); color: var(--body-text-color, black);">
         <h3 style="margin-top: 0;">Verification Status: {result['status']}</h3>
         <p><strong>Message:</strong> {result['message']}</p>
         <hr>

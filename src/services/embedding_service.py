@@ -77,7 +77,7 @@ class EmbeddingService:
             logger.error(f"Failed to initialize EmbeddingService: {e}")
             raise
 
-    def align_face(self, img: np.ndarray, landmarks: np.ndarray) -> np.ndarray:
+    def align_face(self, img: np.ndarray, landmarks: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         Aligns the face using the 5 landmarks provided by YuNet.
         Landmarks: [right_eye, left_eye, nose_tip, right_mouth, left_mouth]
@@ -101,7 +101,7 @@ class EmbeddingService:
         # Apply affine transform
         h, w = img.shape[:2]
         aligned = cv2.warpAffine(img, M, (w, h))
-        return aligned
+        return aligned, M
 
     def extract_faces(self, image: np.ndarray) -> List[dict]:
         """
@@ -136,16 +136,22 @@ class EmbeddingService:
                     # (Standard approach to preserve crop quality)
                     # Alternatively, just crop the bounding box if alignment is skipped.
                     # For FaceNet, alignment is highly recommended.
-                    aligned_img = self.align_face(image, landmarks)
+                    aligned_img, M = self.align_face(image, landmarks)
                     
-                    # Crop from the aligned image
-                    # Note: Since the image rotated, the bounding box technically shifts. 
-                    # A strict implementation would recalculate the bbox.
-                    # For simplicity and speed, if rotation angle is small, the original bbox is roughly okay.
-                    # For a perfect implementation, we apply the inverse rotation to the bbox corners.
+                    # Crop from the aligned image by transforming the bounding box center
+                    cx = x + box_w / 2.0
+                    cy = y + box_h / 2.0
                     
-                    # Just cropping the unaligned bbox from the aligned image is an approximation.
-                    face_crop = aligned_img[y:y+box_h, x:x+box_w]
+                    new_center = np.dot(M, np.array([cx, cy, 1.0]))
+                    new_cx, new_cy = int(new_center[0]), int(new_center[1])
+                    
+                    new_x = max(0, int(new_cx - box_w / 2.0))
+                    new_y = max(0, int(new_cy - box_h / 2.0))
+                    
+                    new_x_end = min(w, new_x + box_w)
+                    new_y_end = min(h, new_y + box_h)
+                    
+                    face_crop = aligned_img[new_y:new_y_end, new_x:new_x_end]
                     
                     if face_crop.size == 0:
                         continue

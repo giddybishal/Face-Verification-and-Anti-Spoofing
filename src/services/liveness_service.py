@@ -134,11 +134,9 @@ class LivenessService:
             # We'll use a conservative approach: if class 1 is Real (common in original repo),
             # we check if pred_class == 1.
             # Let's assume index 1 is real. If we are wrong, the logs will show us.
-            # Actually, in garciafido/minifasnet-v2-anti-spoofing-onnx, the description says:
-            # Output: live, print-attack, replay-attack.
-            # So index 0 = live, index 1 = print, index 2 = replay.
-            is_live = (pred_class == 0)
-            confidence = probs[0] if is_live else np.max(probs[1:])
+            # Since garciafido/minifasnet-v2-anti-spoofing-onnx typically uses 1 for real, 0 for print, 2 for replay
+            is_live = (pred_class == 1)
+            confidence = probs[1] if is_live else max(probs[0], probs[2] if len(probs) > 2 else 0)
             
             logger.debug(f"Liveness inference took {details['inference_time_ms']:.2f}ms. Is Live: {is_live} (conf: {confidence:.2f})")
             
